@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SchoolCheck Kiosk</string>
+    <string name="camera_permission_title">Camera permission needed</string>
+    <string name="camera_permission_rationale">SchoolCheck Kiosk uses the front camera to scan a student\u2019s face for check-in and check-out. Photos are sent straight to the school server for recognition and are never saved on this device or shown in the gallery.</string>
+    <string name="camera_permission_continue">Allow camera</string>
+    <string name="camera_permission_not_now">Not now</string>
+</resources>

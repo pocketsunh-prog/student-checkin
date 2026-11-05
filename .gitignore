@@ -1,0 +1,51 @@
+# env
+.env
+.env.local
+.env.*.local
+
+# node
+node_modules/
+npm-debug.log*
+.npm/
+.pnpm-store/
+
+# builds
+dist/
+.build/
+.next/
+out/
+*.tsbuildinfo
+
+# prisma local db
+backend/prisma/*.db
+
+# storage / uploads
+backend/storage/
+storage/
+uploads/
+
+# face models are vendored under backend/models (downloaded by script); ignore temp downloads
+.probe/
+backend/models/*.tmp
+
+# android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+*.iml
+*.apk
+*.aab
+
+# test output
+coverage/
+playwright-report/
+test-results/
+qa/screenshots/
+qa/fixtures/
+qa/*.log
+
+# OS
+.DS_Store
+Thumbs.db

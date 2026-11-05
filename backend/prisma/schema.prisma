@@ -1,0 +1,165 @@
+// Student check-in system — Prisma schema (MySQL 8)
+// See docs/DATABASE.md for the canonical table documentation.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Sex {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+}
+
+enum AttendanceMethod {
+  FACE
+  MANUAL
+}
+
+enum ScanAction {
+  CHECK_IN
+  CHECK_OUT
+  UNRECOGNIZED
+}
+
+enum ScanResult {
+  SUCCESS
+  NO_FACE
+  MULTIPLE_FACES
+  NO_MATCH
+  ERROR
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+}
+
+model Admin {
+  id           BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  email        String    @unique @db.VarChar(190)
+  name         String    @db.VarChar(120)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  role         AdminRole @default(ADMIN)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.DateTime(3)
+
+  @@map("admins")
+}
+
+model Student {
+  studentId          String        @id @map("student_id") @db.VarChar(32)
+  firstName          String        @map("first_name") @db.VarChar(60)
+  lastName           String        @map("last_name") @db.VarChar(60)
+  dob                DateTime      @db.Date
+  sex                Sex
+  class              String        @db.VarChar(32)
+  form               String        @db.VarChar(32)
+  passwordHash       String        @map("password_hash") @db.VarChar(255)
+  faceDescriptor     Json?         @map("face_descriptor")
+  faceDescriptorHash String?       @map("face_descriptor_hash") @db.Char(64)
+  faceEnrolledAt     DateTime?     @map("face_enrolled_at") @db.DateTime(3)
+  photoPath          String?       @map("photo_path") @db.VarChar(255)
+  status             StudentStatus @default(ACTIVE)
+  createdAt          DateTime      @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt          DateTime      @updatedAt @map("updated_at") @db.DateTime(3)
+
+  attendance Attendance[]
+  scanEvents ScanEvent[]
+
+  @@index([class, form])
+  @@index([status])
+  @@index([faceEnrolledAt])
+  @@map("students")
+}
+
+model Device {
+  id           String    @id @db.Char(36)
+  name         String    @db.VarChar(120)
+  location     String    @db.VarChar(190)
+  apiKeyHash   String    @unique @map("api_key_hash") @db.Char(64)
+  apiKeyPrefix String    @map("api_key_prefix") @db.VarChar(16)
+  active       Boolean   @default(true)
+  lastSeenAt   DateTime? @map("last_seen_at") @db.DateTime(3)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.DateTime(3)
+
+  attendanceCheckIns  Attendance[] @relation("AttendanceCheckInDevice")
+  attendanceCheckOuts Attendance[] @relation("AttendanceCheckOutDevice")
+  scanEvents          ScanEvent[]
+
+  @@map("devices")
+}
+
+model Attendance {
+  id               BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  studentId        String           @map("student_id") @db.VarChar(32)
+  date             DateTime         @db.Date
+  checkInAt        DateTime?        @map("check_in_at") @db.DateTime(3)
+  checkOutAt       DateTime?        @map("check_out_at") @db.DateTime(3)
+  status           AttendanceStatus @default(PRESENT)
+  lateMinutes      Int              @default(0) @map("late_minutes") @db.UnsignedInt
+  method           AttendanceMethod @default(FACE)
+  checkInDeviceId  String?          @map("check_in_device_id") @db.Char(36)
+  checkOutDeviceId String?          @map("check_out_device_id") @db.Char(36)
+  note             String?          @db.VarChar(500)
+  createdAt        DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt        DateTime         @updatedAt @map("updated_at") @db.DateTime(3)
+
+  student        Student @relation(fields: [studentId], references: [studentId], onDelete: Restrict)
+  checkInDevice  Device? @relation("AttendanceCheckInDevice", fields: [checkInDeviceId], references: [id], onDelete: SetNull)
+  checkOutDevice Device? @relation("AttendanceCheckOutDevice", fields: [checkOutDeviceId], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, date])
+  @@index([date, status])
+  @@index([studentId, date(sort: Desc)])
+  @@map("attendance")
+}
+
+model ScanEvent {
+  id         BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  deviceId   String?    @map("device_id") @db.Char(36)
+  studentId  String?    @map("student_id") @db.VarChar(32)
+  action     ScanAction
+  result     ScanResult
+  confidence Float?     @db.Double
+  imagePath  String?    @map("image_path") @db.VarChar(255)
+  createdAt  DateTime   @default(now()) @map("created_at") @db.DateTime(3)
+
+  device  Device?  @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  student Student? @relation(fields: [studentId], references: [studentId], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([deviceId])
+  @@index([studentId])
+  @@map("scan_events")
+}
+
+model Settings {
+  id                 Int      @id @default(1) @db.UnsignedTinyInt
+  schoolName         String   @default("Greenfield Secondary School") @map("school_name") @db.VarChar(190)
+  dayStartTime       String   @default("08:00") @map("day_start_time") @db.Char(5)
+  lateGraceMinutes   Int      @default(5) @map("late_grace_minutes") @db.UnsignedSmallInt
+  timezone           String   @default("Asia/Hong_Kong") @db.VarChar(64)
+  faceMatchThreshold Float    @default(0.6) @map("face_match_threshold") @db.Double
+  schoolDays         Json     @map("school_days")
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+
+  @@map("settings")
+}

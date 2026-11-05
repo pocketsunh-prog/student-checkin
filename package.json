@@ -1,0 +1,12 @@
+{
+  "name": "student-checkin",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Student face check-in/out system: Node.js API, Next.js admin, Android kiosk, MySQL",
+  "scripts": {
+    "e2e": "node scripts/e2e-api.mjs",
+    "models": "node scripts/download-face-models.mjs",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down"
+  }
+}

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive launcher icon foreground: a friendly face-in-frame mark on a dark field. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- camera frame corners -->
+    <path
+        android:fillColor="#34D399"
+        android:pathData="M36,28 L46,28 L46,32 L40,32 L40,38 L36,38 Z" />
+    <path
+        android:fillColor="#34D399"
+        android:pathData="M72,28 L62,28 L62,32 L68,32 L68,38 L72,38 Z" />
+    <path
+        android:fillColor="#34D399"
+        android:pathData="M36,80 L46,80 L46,76 L40,76 L40,70 L36,70 Z" />
+    <path
+        android:fillColor="#34D399"
+        android:pathData="M72,80 L62,80 L62,76 L68,76 L68,70 L72,70 Z" />
+    <!-- face oval -->
+    <path
+        android:fillColor="#E5EDF8"
+        android:pathData="M54,38 C64,38 70,45 70,55 C70,66 63,74 54,74 C45,74 38,66 38,55 C38,45 44,38 54,38 Z" />
+    <!-- eyes -->
+    <path
+        android:fillColor="#0B1220"
+        android:pathData="M47,51 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
+    <path
+        android:fillColor="#0B1220"
+        android:pathData="M61,51 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
+    <!-- smile -->
+    <path
+        android:fillColor="#0B1220"
+        android:pathData="M48,63 Q54,69 60,63 L60,65 Q54,71 48,65 Z" />
+</vector>
