@@ -3,6 +3,11 @@
 All API routes are under **`/api`**. The default local base URL is `http://localhost:3001/api`.
 Consumers: Next.js admin/student web app (browser) and the Android kiosk app.
 
+The Next.js web service also exposes a same-origin proxy at `http://<school-host>:3000/api/*`
+(implemented in `admin/src/app/api/[...path]/route.ts`; Docker target `http://backend:3001`). The
+Android kiosk defaults to this URL so only port 3000 needs to be reachable on the school network;
+the API contract is unchanged through either base URL.
+
 ## Conventions
 
 - Transport: JSON over HTTP (except multipart uploads, photo responses and CSV export).

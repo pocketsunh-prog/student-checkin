@@ -129,8 +129,8 @@ fun SetupScreen(
             supportingText = {
                 Text(
                     ui.urlError
-                        ?: "Emulator: http://10.0.2.2:3001/api\n" +
-                        "Phone/tablet on school Wi-Fi: http://<PC-LAN-IP>:3001/api",
+                        ?: "Setup server URL: $DEFAULT_BASE_URL\n" +
+                        "Same Wi-Fi: http://<school-PC-IP>:3000/api · Emulator: http://10.0.2.2:3000/api",
                 )
             },
         )
@@ -140,7 +140,7 @@ fun SetupScreen(
                     serverUrl = DEFAULT_BASE_URL
                     viewModel.clearErrors()
                 },
-            ) { Text("Use emulator URL") }
+            ) { Text("Use setup server URL") }
         }
 
         Spacer(Modifier.height(12.dp))

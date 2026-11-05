@@ -3,26 +3,11 @@
 ## 1. Overview
 
 ```
-                    ┌─────────────────────────────┐
-   Student web      │  Next.js app (port 3000)    │
-   (register/face)  │  admin portal + student      │
-                    │  self-registration/portal    │
-                    └──────────────┬──────────────┘
-                                   │ REST /api (JWT)
-┌──────────────────┐               │              ┌────────────────────────┐
-│ Android kiosk    │───────────────┼─────────────▶│ Node.js/Express API    │
-│ (many phones)    │  X-Device-Key │              │ port 3001              │
-│ CameraX capture  │  face JPEG    │              │ - auth / students      │
-└──────────────────┘               │              │ - attendance / reports │
-                                   │              │ - face recognition     │
-                                   │              │   (Human + TFJS)       │
-                                   │              └───────────┬────────────┘
-                                   │                          │ Prisma
-                                   │                          ▼
-                                   │              ┌────────────────────────┐
-                                   └─────────────▶│ MySQL 8 (Docker)       │
-                                                  │ port 3307→3306         │
-                                                  └────────────────────────┘
+Browser (admin/student) ──────┐  REST /api (JWT)
+                              ▼
+Android kiosk ──────────▶ Next.js web service (3000) ──▶ Node.js/Express API (3001) ──▶ MySQL 8
+  http://host:3000/api     admin + student pages          Prisma · JWT/device keys      3307→3306
+  X-Device-Key + JPEG      /api/* same-origin proxy        Human FaceRes + TensorFlow.js
 ```
 
 - **Face recognition runs on the backend.** Enrollment and check-in both upload a JPEG; the server

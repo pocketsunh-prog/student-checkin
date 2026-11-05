@@ -86,13 +86,26 @@ signed APK/AAB, signature verification).
 
 On first launch the setup screen opens. Defaults:
 
-- Server base URL: `http://10.0.2.2:3001/api`
+- Server base URL: **`http://192.168.128.140:3000/api`** (baked default; editable in setup)
 - Device key: `demo-kiosk-key-12345` (dev seed from `docs/API.md` §8)
+
+Port 3000 is the Next.js web service and also exposes a same-origin `/api/*` proxy to the backend,
+so the kiosk only needs one school-network port. The URL field accepts a host or a full base URL;
+`host:3000` is normalised to `http://host:3000/api` on save.
 
 | Where the app runs | Server base URL to enter |
 |---|---|
-| Android emulator (backend on the same PC) | `http://10.0.2.2:3001/api` (default; `10.0.2.2` = host loopback) |
-| Physical phone/tablet on the school LAN | `http://<PC-LAN-IP>:3001/api`, e.g. `http://192.168.1.20:3001/api` |
+| Android emulator (server on the same PC) | `http://10.0.2.2:3000/api` (`10.0.2.2` = host loopback) |
+| Physical phone/tablet on the school LAN | `http://192.168.128.140:3000/api` (the baked default) or `http://<PC-LAN-IP>:3000/api` |
+
+Build a different baked default for another school/server with:
+
+```powershell
+.\gradlew.bat assembleRelease -PschoolcheckServerUrl=http://10.0.0.20:3000/api
+```
+
+The setup screen, "Use setup server URL" reset button and server health check remain available
+behind the gear icon on the kiosk.
 
 Find the PC's LAN IP with `ipconfig` (IPv4 Address). The backend must listen on `0.0.0.0`
 (not just `127.0.0.1`) and Windows Firewall must allow inbound TCP 3001 for the phone to

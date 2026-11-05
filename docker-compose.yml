@@ -73,6 +73,9 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api}
     container_name: checkin-admin
     restart: unless-stopped
+    environment:
+      # Same-origin proxy for Android kiosks: http://<host>:3000/api -> backend:3001
+      API_PROXY_TARGET: ${API_PROXY_TARGET:-http://backend:3001}
     ports:
       - "3000:3000"
     depends_on:

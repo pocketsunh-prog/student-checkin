@@ -1,10 +1,19 @@
 package com.schoolcheck.kiosk.data.model
 
+import com.schoolcheck.kiosk.BuildConfig
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/** Default for the Android emulator, which reaches the host machine through 10.0.2.2. */
-const val DEFAULT_BASE_URL = "http://10.0.2.2:3001/api"
+/**
+ * Default school server URL, baked at build time.
+ *
+ * Override per deployment with:
+ *   .\gradlew.bat assembleRelease -PschoolcheckServerUrl=http://10.0.0.20:3000/api
+ *
+ * Port 3000 is the Next.js web service, which proxies API paths to the backend on 3001
+ * (see admin/src/app/api/[...path]/route.ts). This lets a school expose one HTTP port.
+ */
+const val DEFAULT_BASE_URL = BuildConfig.DEFAULT_SERVER_URL
 
 /** Development seed key from docs/API.md §8. Rotate per kiosk in the admin portal. */
 const val DEFAULT_DEVICE_KEY = "demo-kiosk-key-12345"

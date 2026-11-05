@@ -94,9 +94,13 @@ cd android
 adb install -r app\build\outputs\apk\debug\app-debug.apk
 ```
 
-- **Emulator:** server `http://10.0.2.2:3001/api` (default).
-- **Physical phone/tablet:** server `http://<PC-LAN-IP>:3001/api`; allow port 3001 through Windows
-  Firewall; the device and PC must be on the same network.
+- **Default school server URL:** `http://192.168.128.140:3000/api` (port 3000 is the web service;
+  it proxies `/api/*` to the backend on 3001, so only one port needs to be exposed).
+- The URL is editable on the app's **setup screen** (“Server base URL”) and saved on the device.
+  Override the baked default at build time with
+  `.\gradlew.bat assembleRelease -PschoolcheckServerUrl=http://<school-pc>:3000/api`.
+- **Emulator:** `http://10.0.2.2:3000/api`; **physical phone/tablet:** use the PC LAN IP and allow
+  port 3000 through Windows Firewall. The device and PC must be on the same network.
 - Device key is created/rotated in **Admin → Devices**. The seed key is `demo-kiosk-key-12345`.
 - The app captures a JPEG only in memory and posts it; it does not save face images to the gallery.
 - For production, use HTTPS and remove the cleartext-HTTP development allowance.
@@ -111,11 +115,13 @@ The release pipeline is scripted:
 
 ```powershell
 .\scripts\build-release.ps1 -Version 1.0.0
+# optional: bake a different setup server URL into the APK
+.\scripts\build-release.ps1 -Version 1.0.1 -ServerUrl http://10.0.0.20:3000/api
 ```
 
 It builds the Node 26 API/admin images, tags them as `student-checkin-backend:1.0.0` and
-`student-checkin-admin:1.0.0`, builds a **signed** Android APK + AAB, and verifies the APK signature
-with `apksigner`.
+`student-checkin-admin:1.0.0`, builds a **signed** Android APK + AAB (with the setup-server URL,
+default `http://192.168.128.140:3000/api`), and verifies the APK signature with `apksigner`.
 
 ### API release container
 

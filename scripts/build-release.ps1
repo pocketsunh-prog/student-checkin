@@ -1,7 +1,9 @@
 # Builds and tags the release API/admin images and produces signed Android release artifacts.
 # Usage: .\scripts\build-release.ps1 [-Version 1.0.0]
 param(
-    [string]$Version = "1.0.0"
+    [string]$Version = "1.0.0",
+    # Optional baked default for the Android setup screen, e.g. http://192.168.128.140:3000/api
+    [string]$ServerUrl = ""
 )
 
 # Native tools (docker/gradle) write progress to stderr; keep that from becoming a
@@ -24,7 +26,9 @@ try {
         if (-not (Test-Path "keystore.properties")) {
             throw "android\keystore.properties is missing. Copy keystore.properties.example, generate a keystore (keytool), and fill in the passwords. See android\README.md."
         }
-        .\gradlew.bat assembleRelease bundleRelease 2>&1 | ForEach-Object { Write-Host $_ }
+        $gradleArgs = @("assembleRelease", "bundleRelease")
+        if ($ServerUrl) { $gradleArgs += "-PschoolcheckServerUrl=$ServerUrl" }
+        .\gradlew.bat @gradleArgs 2>&1 | ForEach-Object { Write-Host $_ }
         if ($LASTEXITCODE -ne 0) { throw "Gradle release build failed (exit $LASTEXITCODE)" }
 
         $Apk = Join-Path $PWD "app\build\outputs\apk\release\app-release.apk"

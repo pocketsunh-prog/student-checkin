@@ -38,12 +38,14 @@ $env:FACE_VIDEO="$PWD/fixtures/face-camera-leonard1.y4m"; node ui-check.mjs
 
 - API E2E: 22/22 passed on the Node 26.13.0 backend with the human face provider
   (same-person 0.7934 cosine, impostor rejected, check-out flow, reports).
+- Same E2E **through the port-3000 proxy** (`API_URL=http://localhost:3000/api`): 22/22, covering
+  JSON auth, multipart face upload, CSV and reports through the same-origin Android route.
 - Browser UI: 9/9 passed on Next.js 16.4.5; admin pages, webcam registration with real server-side
   face enrollment, no console/HTTP errors. The newly enrolled face was then recognized by the kiosk
   at 0.8566.
-- Android: signed release APK installed on the emulator, Test Connection to the real backend
-  returned *Demo Kiosk · Main Entrance*, kiosk camera ran, and a scan produced the real `NO_FACE`
-  response from the API.
+- Android: signed release APK installed on the emulator, default setup URL
+  `http://192.168.128.140:3000/api`, Test Connection through the port-3000 proxy returned *Demo
+  Kiosk · Main Entrance*, kiosk camera ran, and a scan produced the real `NO_FACE` response.
 - Release pipeline: `scripts/build-release.ps1` builds/tags the Node 26 images, signed APK and AAB,
   and verifies the APK signature (`CN=SchoolCheck Release`, v2).
 

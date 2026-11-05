@@ -40,6 +40,12 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
+
+        // School server used by the setup screen's default value. 3000 is the web/API-proxy
+        // port; students/kiosks only need this single port exposed on the school network.
+        val defaultServerUrl = (project.findProperty("schoolcheckServerUrl") as String?)
+            ?: "http://192.168.128.140:3000/api"
+        buildConfigField("String", "DEFAULT_SERVER_URL", "\"$defaultServerUrl\"")
     }
 
     signingConfigs {
@@ -73,6 +79,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     packaging {

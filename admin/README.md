@@ -64,8 +64,17 @@ The UI still renders when the API is down — pages show an error state with a r
 
 | Variable | Default | Notes |
 |---|---|---|
-| `NEXT_PUBLIC_API_URL` | `http://localhost:3001/api` | Base URL of the backend API. **Inlined at build time** — rebuild after changing it. |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:3001/api` | Base URL of the backend API used by the browser app. **Inlined at build time** — rebuild after changing it. |
+| `API_PROXY_TARGET` | `http://localhost:3001` | Backend target for the same-origin `/api/*` proxy. Docker Compose sets `http://backend:3001`. |
 | `PORT` | `3000` | Used by `next dev` / `next start` (the standalone server uses `PORT`, default 3000). |
+
+### Android API proxy
+
+`src/app/api/[...path]/route.ts` proxies every method under `/api/*` to `API_PROXY_TARGET`. This is
+what lets the Android kiosk use `http://<school-host>:3000/api` as its only server URL (the default
+baked into the app), with no second port exposed on the school network. JSON, multipart face
+uploads, bearer headers and device-key headers are forwarded; binary/CSV responses pass through.
+The browser app itself still calls `NEXT_PUBLIC_API_URL` directly.
 
 ## Webcam and localhost
 
