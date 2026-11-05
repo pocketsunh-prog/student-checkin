@@ -3,8 +3,9 @@
 A full-stack attendance system for schools: students enroll once with their face, school phones/tablets
 act as face-recognition kiosks, and administrators get live attendance plus absence/late reports.
 
-**Stack:** Node.js + Express + Prisma + MySQL 8 (Docker) · Next.js 15 admin/student web · Android
-(Kotlin + Compose + CameraX) kiosk · face recognition with `@vladmandic/human` + TensorFlow.js.
+**Stack:** Node.js **26.13.0 LTS** + Express + Prisma + MySQL 8 (Docker) · Next.js **16.4.5**
+admin/student web · Android (Kotlin + Compose + CameraX) kiosk · face recognition with
+`@vladmandic/human` 3.3.6 + TensorFlow.js 4.22 (with a small Node 26 compatibility shim).
 
 ---
 
@@ -34,8 +35,13 @@ docker compose up -d --build
 docker compose ps
 ```
 
-First build downloads Node/Android-unrelated dependencies and the TensorFlow.js native addon; expect
-3–8 minutes. MySQL migrations and seed data run automatically on backend start.
+First build downloads Node dependencies and the TensorFlow.js native addon; expect 3–8 minutes.
+MySQL migrations and seed data run automatically on backend start. Both containers run Node
+**26.13.0**; the backend image loads a Node 26 shim for the latest TensorFlow.js addon.
+
+For local development install a Node **26 LTS** release — [`.nvmrc`](.nvmrc) pins **26.13.0**, the
+version used in Docker. The current WinGet build (26.8.1) also passes the backend test suite and the
+Next.js build; Node 24 works for mock/UI workflows but emits an engine warning.
 
 | Service | URL |
 |---|---|
@@ -61,7 +67,7 @@ Change these credentials in `.env` before any real deployment.
 
 ### Try it end-to-end
 
-1. Open http://localhost:3000/login and sign in as admin. The dashboard will be mostly empty.
+1. Open http://localhost:3000/login and sign in as admin. The dashboard is populated with the seeded demo attendance.
 2. Open http://localhost:3000/register, create a student and capture a face with the webcam
    (or enroll a face later from the admin student page). The photo becomes the student's face key.
 3. Start the Android kiosk (below), configure `http://10.0.2.2:3001/api` (emulator) or
@@ -96,6 +102,51 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 - For production, use HTTPS and remove the cleartext-HTTP development allowance.
 
 More detail: [android/README.md](android/README.md).
+
+---
+
+## Release builds & signing
+
+The release pipeline is scripted:
+
+```powershell
+.\scripts\build-release.ps1 -Version 1.0.0
+```
+
+It builds the Node 26 API/admin images, tags them as `student-checkin-backend:1.0.0` and
+`student-checkin-admin:1.0.0`, builds a **signed** Android APK + AAB, and verifies the APK signature
+with `apksigner`.
+
+### API release container
+
+```powershell
+docker compose build backend admin
+docker tag student-checkin-backend:latest student-checkin-backend:1.0.0
+docker tag student-checkin-admin:latest student-checkin-admin:1.0.0
+docker compose up -d --force-recreate backend admin
+```
+
+Both images run Node **26.13.0**; the API image reports `faceService: ready` only after the face
+models have loaded. The backend image is the release API artifact (immutable tag recommended).
+
+### Signed Android release
+
+Release signing reads `android/keystore.properties` (gitignored) or `ANDROID_KEYSTORE_*`
+environment variables in CI. A demo release keystore is generated in this workspace at
+`android/keystore/release-demo.jks` with its passwords in `android/keystore.properties`; **back both
+up and replace them with a school-owned key before publishing**. Losing the key prevents future
+updates to the installed app.
+
+```powershell
+cd android
+.\gradlew.bat assembleRelease bundleRelease
+# APK: app\build\outputs\apk\release\app-release.apk
+# AAB: app\build\outputs\bundle\release\app-release.aab
+```
+
+`keystore.properties.example` documents the fields; `keystore/` and `keystore.properties` are
+gitignored. The release APK is signed with APK Signature Scheme v2 and verified in this build
+(certificate subject `CN=SchoolCheck Release`).
 
 ---
 
@@ -139,15 +190,16 @@ docker compose up -d mysql
 cd backend
 Copy-Item ..\.env.example .env
 # edit DATABASE_URL to mysql://checkin:checkinpass@127.0.0.1:3307/checkin
-npm install --ignore-scripts      # native TFJS addon is only needed in Docker/Node 20
+npm install --ignore-scripts      # native TFJS addon is only needed for real-face mode/Docker
 npx prisma migrate deploy
 npm run seed
 $env:FACE_PROVIDER = "mock"       # UI/dev only: no real face matching
 npm run dev
 ```
 
-Use `FACE_PROVIDER=human` locally only with Node 20 and the native `@tensorflow/tfjs-node` addon
-installed; the Docker image (Node 20) is the supported way to run real recognition. Mock mode hashes
+Use `FACE_PROVIDER=human` locally only with Node 26 and the native `@tensorflow/tfjs-node` addon
+installed; the Docker image (Node 26, with the compatibility shim) is the supported way to run real
+recognition. Mock mode hashes
 image bytes, so the same file matches itself and different files never match — useful for API/UI work.
 See [backend/README.md](backend/README.md).
 
@@ -193,16 +245,19 @@ node ui-check.mjs
 The Playwright check emulates a webcam, completes the public registration flow against the real
 backend (including face enrollment), and screenshots every page. See [qa/README.md](qa/README.md).
 
-### Verified in this build
+### Verified in this build (Node 26.13.0 / Next.js 16.4.5)
 
 - Backend: `typecheck`/`build` pass; **61/61** vitest+supertest tests pass against MySQL.
-- API E2E with the **human** face provider: **22/22** checks (registration, same-person match
-  0.7934, impostor rejected, check-in/check-out state machine, reports, CSV).
-- Browser UI E2E: **9/9** checks, no console/HTTP errors; webcam registration face was then matched
-  by the kiosk endpoint (confidence 0.8566).
-- Android: `assembleDebug` + unit tests pass; app connects to the real backend on the emulator and a
-  scan returns the live `NO_FACE` response from the API.
-- Docker: MySQL → migrations → seed → API → face models all start healthy on a fresh volume.
+- API E2E with the **human** face provider on Node 26: **22/22** checks (registration, same-person
+  match 0.7934, impostor rejected, check-in/check-out state machine, reports, CSV). The Node 26
+  TensorFlow.js compatibility shim is exercised by this run.
+- Browser UI E2E on Next.js 16: **9/9** checks, no console/HTTP errors; webcam registration face was
+  then matched by the kiosk endpoint (confidence 0.8566).
+- Android: debug build, **signed release APK/AAB**, and unit tests pass. The signed release APK was
+  installed on the emulator, connected to the real backend, and returned the live `NO_FACE` API
+  response.
+- Docker: MySQL → migrations → seed → API → face models all start healthy on a fresh volume; both
+  images run Node 26.13.0.
 
 The E2E script downloads three tiny portraits from the public `face-api.js` examples into
 `qa/fixtures/` (gitignored) and exercises registration, face match, check-in, impostor rejection,
@@ -242,7 +297,7 @@ School start time, late grace, timezone, face threshold and school days are edit
 │  ├─ prisma/          schema, migration, seed
 │  ├─ src/             app, routes, services, middleware, face providers
 │  └─ tests/
-├─ admin/              Next.js 15 admin + student portal, Dockerfile
+├─ admin/              Next.js 16 admin + student portal, Dockerfile
 ├─ android/            Kotlin/Compose CameraX kiosk
 ├─ docs/               API.md, DATABASE.md, ARCHITECTURE.md
 ├─ scripts/            e2e-api.mjs, download-face-models.mjs

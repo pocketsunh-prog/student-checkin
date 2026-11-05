@@ -4,7 +4,7 @@
   "private": true,
   "description": "Student check-in/check-out API with server-side face recognition (Express, Prisma, MySQL)",
   "engines": {
-    "node": ">=20"
+    "node": ">=26.0.0"
   },
   "scripts": {
     "dev": "tsx watch src/server.ts",
@@ -42,7 +42,7 @@
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.3.0",
-    "@types/node": "^26.6.6",
+    "@types/node": "26.6.6",
     "@types/supertest": "^7.2.1",
     "supertest": "^7.3.1",
     "typescript": "^5.9.3",

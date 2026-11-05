@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
-# Backend API image: Node 20 (prebuilt tfjs-node addon), Prisma, Human face models.
-FROM node:20-bookworm-slim AS base
+# Backend API image: Node 26 LTS (latest), Prisma, Human face models.
+FROM node:26.13.0-bookworm-slim AS base
 RUN apt-get update -y \
     && apt-get install -y --no-install-recommends openssl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
@@ -8,7 +8,7 @@ WORKDIR /app
 
 # ---------------------------------------------------------------------------
 # Dependencies (all, for the TypeScript build). Normal npm ci so the
-# @tensorflow/tfjs-node native addon is installed for Node 20.
+# @tensorflow/tfjs-node native addon is installed for Node 26.
 # ---------------------------------------------------------------------------
 FROM base AS deps
 COPY package.json package-lock.json ./

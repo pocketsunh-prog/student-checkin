@@ -8,5 +8,8 @@
     "models": "node scripts/download-face-models.mjs",
     "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down"
+  },
+  "engines": {
+    "node": ">=26.0.0"
   }
 }

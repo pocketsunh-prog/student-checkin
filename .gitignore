@@ -49,3 +49,6 @@ qa/*.log
 # OS
 .DS_Store
 Thumbs.db
+
+# release artifacts (built locally, not committed)
+release/

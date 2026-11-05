@@ -12,3 +12,7 @@ captures/
 # Build outputs
 *.apk
 *.aab
+
+# Release signing (never commit private keys/passwords)
+keystore.properties
+keystore/

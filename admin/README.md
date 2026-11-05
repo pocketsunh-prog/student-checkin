@@ -1,6 +1,6 @@
 # SchoolCheck — admin & student web app
 
-Next.js 15 (App Router) web app for the student check-in / check-out system. It contains:
+Next.js 16.4.5 (App Router) web app for the student check-in / check-out system. It contains:
 
 - the **admin console** (dashboard, students, face enrolment, attendance, reports, kiosk devices, settings), and
 - the **public student pages** (self-registration with a webcam photo and the student attendance portal).
@@ -12,12 +12,12 @@ talks to it over HTTP; it does not need the API to be running in order to build.
 
 | Concern | Choice |
 |---|---|
-| Framework | Next.js 15.5 (App Router, standalone output) |
-| UI | React 19, TypeScript (strict), Tailwind CSS v3.4 |
+| Framework | Next.js 16.4.5 (App Router, standalone output, Turbopack build) |
+| UI | React 19.3.1, TypeScript (strict), Tailwind CSS v3.4 |
 | Data | Typed `fetch` wrapper against `docs/API.md` (no external state library) |
 | Auth | Bearer JWT in `localStorage`, client-side route guard |
 | Charts | Hand-rolled SVG/CSS (no chart dependency) |
-| Runtime | Node 20+ (local dev tested on Node 24) |
+| Runtime | Node 26 LTS (Docker pins 26.13.0; 26.8+ builds locally) |
 
 ## Screens
 
@@ -40,7 +40,7 @@ admin add-student modal and both face-enrolment flows.
 
 ## Local setup
 
-Requirements: Node.js 20+ (Node 24 works), npm 10+.
+Requirements: Node.js 26 LTS (see `../.nvmrc`; 26.8+ works locally), npm 10+.
 
 ```bash
 cd admin

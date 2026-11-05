@@ -1,3 +1,4 @@
+import './lib/node-compat';
 import { createApp } from './app';
 import { config } from './config/env';
 import { logger } from './lib/logger';

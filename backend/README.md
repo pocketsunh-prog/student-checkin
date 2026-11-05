@@ -17,7 +17,7 @@ The API contract lives in [`../docs/API.md`](../docs/API.md); the schema is docu
 
 | Concern | Choice |
 |---|---|
-| Runtime | Node.js 20 (Docker) / Node 24 works locally in mock mode |
+| Runtime | Node.js 26 LTS (Docker pins 26.13.0; 26.8+ runs locally) |
 | HTTP | Express 5 + helmet + cors + express-rate-limit |
 | Validation | zod |
 | Auth | jsonwebtoken (HS256, 12 h) + bcryptjs (cost 12) |
@@ -30,7 +30,9 @@ The API contract lives in [`../docs/API.md`](../docs/API.md); the schema is docu
 
 ## Quick start (local, mock face provider)
 
-Mock mode needs **no TensorFlow** and works on Node 24.
+Mock mode needs **no TensorFlow** and works on Node 26. Install a Node 26 LTS release
+([`.nvmrc`](../.nvmrc) pins 26.13.0 to match Docker; 26.8+ also works). Node 24 can run mock/UI
+workflows but is below the declared engine version.
 
 ```bash
 # from repo root: start MySQL on host port 3307
@@ -38,7 +40,7 @@ docker compose up -d mysql
 
 cd backend
 cp .env.example .env        # or keep the provided backend/.env
-npm install --ignore-scripts   # Node 24: skips native tfjs-node build
+npm install --ignore-scripts   # skips the native tfjs-node build for mock-mode development
 npx prisma generate
 npx prisma migrate deploy
 npm run seed                # idempotent
@@ -94,7 +96,7 @@ docker compose logs -f backend
 curl http://localhost:3001/api/health
 ```
 
-The image (`backend/Dockerfile`, `node:20-bookworm-slim`) installs dependencies with normal
+The image (`backend/Dockerfile`, `node:26.13.0-bookworm-slim`) installs dependencies with normal
 `npm ci` so the **prebuilt `@tensorflow/tfjs-node` addon is available**, builds TypeScript,
 and runs `docker-entrypoint.sh`, which:
 
@@ -109,6 +111,12 @@ The container healthcheck hits `GET /api/health`; models load in the background 
 server starts (kiosk endpoints return `503 FACE_SERVICE_UNAVAILABLE` until ready).
 
 Vendored models in `backend/models/`: `blazeface`, `facemesh`, `faceres` (~9 MB). Do not delete.
+
+**Node 26 compatibility:** TensorFlow.js Node 4.22 (still the latest release) calls the legacy
+`util.isNullOrUndefined()` helper that Node 23+ removed. `src/lib/node-compat.ts` installs a
+one-line shim before TFJS is loaded; it is imported by `src/server.ts` and
+`src/face/human.ts`. This build was verified end-to-end on Node 26.13.0 inside Docker (face
+provider ready, 22/22 API E2E checks).
 
 ---
 

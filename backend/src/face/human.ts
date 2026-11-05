@@ -1,4 +1,6 @@
 import path from 'node:path';
+// Must be imported before @tensorflow/tfjs-node (Node 26 compatibility).
+import '../lib/node-compat';
 import type { FaceBox, FaceExtraction, FaceProvider } from './types';
 
 type AnyRecord = Record<string, any>;

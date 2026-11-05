@@ -42,8 +42,8 @@
 
 | Component | Tech | Location | Port |
 |---|---|---|---|
-| Admin/student web | Next.js 15 (App Router), React 19, TypeScript, Tailwind | `admin/` | 3000 |
-| API + recognition | Node.js 20, Express, TypeScript, Prisma, Zod, JWT, Multer | `backend/` | 3001 |
+| Admin/student web | Next.js 16 (App Router), React 19, TypeScript, Tailwind | `admin/` | 3000 |
+| API + recognition | Node.js 26 LTS, Express, TypeScript, Prisma, Zod, JWT, Multer | `backend/` | 3001 |
 | Database | MySQL 8.0 in Docker, volume `mysql_data` | `docker-compose.yml` | 3307 (host) |
 | Kiosk app | Android native Kotlin, Jetpack Compose, CameraX, OkHttp | `android/` | — |
 | Face models | blazeface, facemesh, faceres (~9 MB) | `backend/models/` | — |

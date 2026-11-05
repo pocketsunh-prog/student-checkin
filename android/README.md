@@ -46,6 +46,42 @@ sdk.dir=C\:\\Android\\Sdk
 
 If SDK components are missing, install them with `sdkmanager "platforms;android-35" "build-tools;35.0.0"`.
 
+## Release build (signed)
+
+Release signing reads `android/keystore.properties` (gitignored) or the `ANDROID_KEYSTORE_*`
+environment variables in CI. `keystore.properties.example` documents the fields.
+
+```powershell
+# One-time key generation (replace with a school-owned key for production)
+keytool -genkeypair -v -keystore keystore/release-demo.jks -storetype PKCS12 `
+  -keyalg RSA -keysize 2048 -validity 10000 -alias schoolcheck `
+  -dname "CN=SchoolCheck Release, OU=IT, O=Greenfield Secondary School, L=Hong Kong, ST=Hong Kong, C=HK"
+
+Copy-Item keystore.properties.example keystore.properties
+# fill in storePassword/keyPassword, then:
+.\gradlew.bat assembleRelease bundleRelease
+```
+
+| Artifact | Path |
+|---|---|
+| Signed APK | `app/build/outputs/apk/release/app-release.apk` |
+| Signed AAB (Play Store) | `app/build/outputs/bundle/release/app-release.aab` |
+
+Verify the signature and certificate:
+
+```powershell
+& "$env:ANDROID_HOME\build-tools\36.0.0\apksigner.bat" verify --verbose --print-certs `
+  app\build\outputs\apk\release\app-release.apk
+```
+
+This build produced a v2-signed APK (certificate `CN=SchoolCheck Release`) and a signed AAB. The
+demo keystore is `android/keystore/release-demo.jks` with its passwords in
+`android/keystore.properties`; both are gitignored. **Back them up** — losing the release key means
+you cannot update an installed app. Replace the demo key with a school-owned one before publishing.
+
+`scripts/build-release.ps1` in the repo root performs the whole release build (Node 26 images,
+signed APK/AAB, signature verification).
+
 ## Configuring the server
 
 On first launch the setup screen opens. Defaults:
@@ -145,6 +181,8 @@ and a **local stub server** implementing the documented `docs/API.md` §5 respon
 | Check | Result |
 |---|---|
 | `.\gradlew.bat assembleDebug` | BUILD SUCCESSFUL (Gradle 8.11.1, AGP 8.7.3, Kotlin 2.0.21) |
+| `.\gradlew.bat assembleRelease bundleRelease` | BUILD SUCCESSFUL; APK v2-signed + AAB signed |
+| `apksigner verify --print-certs` | Verified, signer `CN=SchoolCheck Release` |
 | `.\gradlew.bat testDebugUnitTest` | 7/7 tests pass (URL normalisation + validation) |
 | Install + cold launch on API 37 | Launches to kiosk (already configured), no crash |
 | Setup screen | Renders; normalised-URL preview correct (`10.0.2.2:3101` → `http://10.0.2.2:3101/api`) |
@@ -166,10 +204,11 @@ Evidence: `screenshots/setup-form.png`, `setup-connected.png`, `setup-badkey.png
 `recent-scans.png`, `settings-dialog.png`, `permission-rationale.png`, `permission-denied.png`,
 `error-retry.png`, `retry-success.png`.
 
-**Not verified:** the real backend (recognition threshold, enrollment, attendance writes) and
-real face matching — the emulator's virtual camera has no enrolled face. That must be tested on
-a physical tablet/phone with a student enrolled through the real backend. The received MIME
-`image` part was accepted by the stub; server-side face detection was not exercised.
+**Real backend follow-up:** the release APK was installed on the same emulator and its **Test
+connection** hit the real Docker backend successfully (device *Demo Kiosk · Main Entrance*, face
+service ready). A live scan from the emulator returned the real `NO_FACE` response from the API.
+Real face matching on this device still needs a physical tablet/phone with an enrolled student
+because the emulator's virtual camera has no face.
 
 ## Known limitations
 

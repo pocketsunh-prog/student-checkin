@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---- deps: install only what the lockfile pins ----
-FROM node:20-alpine AS deps
+FROM node:26.13.0-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
@@ -9,7 +9,7 @@ RUN npm ci --no-audit --no-fund
 # ---- builder: compile the Next.js app ----
 # NEXT_PUBLIC_API_URL is inlined into the browser bundle at build time, so it is
 # a build ARG (not a runtime env var). The API is NOT contacted during the build.
-FROM node:20-alpine AS builder
+FROM node:26.13.0-alpine AS builder
 WORKDIR /app
 ARG NEXT_PUBLIC_API_URL=http://localhost:3001/api
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
@@ -19,7 +19,7 @@ COPY . .
 RUN npm run build
 
 # ---- runner: minimal standalone server, non-root ----
-FROM node:20-alpine AS runner
+FROM node:26.13.0-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
