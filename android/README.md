@@ -5,8 +5,9 @@ Android kiosk app for the student check-in / check-out system. The kiosk is deli
 recognition result. All face detection, matching and attendance rules live in the backend
 (see `docs/ARCHITECTURE.md`).
 
-- **Stack:** Kotlin, Jetpack Compose (Material 3), CameraX 1.4, OkHttp 4, kotlinx.serialization,
-  DataStore Preferences, coroutines. Single activity, no navigation library.
+- **Stack:** Kotlin, Jetpack Compose (Material 3), CameraX 1.4, **ML Kit Face Detection 16.1.7**
+  (on-device live guidance), OkHttp 4, kotlinx.serialization, DataStore Preferences, coroutines.
+  Single activity, no navigation library.
 - **SDK:** `minSdk 26`, `compileSdk 35`, `targetSdk 35`.
 - **Package / app name:** `com.schoolcheck.kiosk` / **SchoolCheck Kiosk**.
 
@@ -16,6 +17,8 @@ recognition result. All face detection, matching and attendance rules live in th
 |---|---|
 | Setup (first launch, or gear icon) | Editable server base URL + device key. **Test connection** calls `GET /api/kiosk/health` with `X-Device-Key` and shows the device name/location and whether the face service is ready. Saved in DataStore. URL normalisation: missing `http://` is added, trailing `/` stripped, `/api` appended when the user only typed `host:port`. |
 | Kiosk camera | Front camera preview by default (flip button for rear), face-oval guide, one huge **SCAN** button. Captures JPEG **in memory** (`ImageCapture.takePicture` callback) — never written to disk or the gallery. |
+| Live face guidance | ML Kit runs on CameraX `ImageAnalysis` frames. The oval turns green and a notice appears for **No face / Only one person / Move closer / Move back / Centre your face / Face detected — hold still**. Scan stays disabled until one well-framed face is ready, so bad frames are not uploaded. Falls back to manual framing if a device cannot bind analysis + preview + capture. |
+| Face registration | Setup → **Register a student face** (or **Register this face** on a NO_MATCH result): student ID + password → `POST /api/auth/student/login`, then guided camera → `POST /api/student/enroll-face` with the bearer token. The token is memory-only; no face image is written to device storage. |
 | Scan upload | `POST /api/kiosk/verify` as `multipart/form-data` with field `image` and header `X-Device-Key`. `mode` is omitted so the server uses its AUTO check-in/out logic. Only one upload can be in flight; the Scan button is disabled while checking. |
 | Result overlay | ✓ Checked in / out, ⚠ Already checked in/out, LATE + late minutes, PRESENT, student name / ID / class, confidence and server `message`. Unmatched: `NO_FACE`, `MULTIPLE_FACES`, `NO_MATCH` with friendly text. HTTP errors (401, 413, 422, 429, 5xx, 503 face service warming up) and network failures are mapped to plain-language messages, with a **Try again** retry for transport failures. Successful/unmatched results auto-return to the camera after ~5 s; failures stay until dismissed. |
 | Heartbeat & status | `POST /api/kiosk/heartbeat` every 60 s while the kiosk screen is visible. Badge: **Online** / **Offline** / **Connecting…** / **Key rejected** (401). |
@@ -34,7 +37,9 @@ cd android
 ```
 
 - APK: `android/app/build/outputs/apk/debug/app-debug.apk`
-- Unit tests (URL normalisation/validation): `.\gradlew.bat testDebugUnitTest`
+- Unit tests (URL normalisation + face-fit heuristics): `.\gradlew.bat testDebugUnitTest`
+- The bundled ML Kit face model makes the release APK larger (~47 MB); AAB delivery reduces the
+  installed download to the device ABI.
 - Install on a connected device/emulator: `adb install -r app\build\outputs\apk\debug\app-debug.apk`
 - Launch: `adb shell am start -n com.schoolcheck.kiosk/.MainActivity`
 
@@ -107,9 +112,28 @@ Build a different baked default for another school/server with:
 The setup screen, "Use setup server URL" reset button and server health check remain available
 behind the gear icon on the kiosk.
 
-Find the PC's LAN IP with `ipconfig` (IPv4 Address). The backend must listen on `0.0.0.0`
-(not just `127.0.0.1`) and Windows Firewall must allow inbound TCP 3001 for the phone to
-reach it. Both devices must be on the same network.
+### Registering a face from the tablet
+
+Browsers refuse camera access on a plain-HTTP LAN origin, so `/register` on the web app cannot use
+a webcam from a phone. The native app provides the same essential flow:
+
+1. Kiosk gear → **Open settings** → **Register a student face** (the setup screen must already be
+   saved), or tap **Register this face** on a “Face not recognised” result.
+2. Sign in with the student's **student ID + password** (`POST /api/auth/student/login`). The token
+   stays in memory and is discarded when you leave the screen.
+3. The live camera shows ML Kit guidance. When the oval turns green and **Face detected — hold
+   still** appears, tap **Register this face** (`POST /api/student/enroll-face`, multipart
+   `faceImage`).
+4. The success screen confirms the student can now scan at the kiosk. No face image is written to
+   device storage; only the JPEG is uploaded to the school server.
+
+This requires a student account that already exists; new accounts are created on the web by the
+student/admin. A student can re-enrol (replace) their face the same way at any time.
+
+Find the PC's LAN IP with `ipconfig` (IPv4 Address). The Docker admin service must listen on
+`0.0.0.0` (not just `127.0.0.1`) and Windows Firewall must allow inbound **TCP 3000** for the
+phone to reach the proxy. Both devices must be on the same network. (TCP 3001 is only needed if
+you bypass the proxy and point the setup URL directly at the API.)
 
 Tap **Test connection** before saving: it hits the real health endpoint and will tell you if
 the URL is wrong (`Can't reach the server…`), the key is wrong (`Device key rejected…`), or
@@ -187,48 +211,44 @@ has no such route. If a face is not enrolled, the kiosk tells the student to see
 
 ## Verification performed (emulator)
 
-Verified on 2026-11-05 with a headless `Pixel_10` AVD (Android 37, x86_64, emulated front camera)
-and a **local stub server** implementing the documented `docs/API.md` §5 response shapes on port
-3101. The stub was used only for this smoke test; the real backend was not running during the test.
+Verified on 2026-11-05 with a headless `Pixel_10` AVD (Android 37, x86_64, emulated camera) and
+both a **local stub** (early result-state tests) and the **real Node 26 backend** through the
+port-3000 proxy.
 
 | Check | Result |
 |---|---|
 | `.\gradlew.bat assembleDebug` | BUILD SUCCESSFUL (Gradle 8.11.1, AGP 8.7.3, Kotlin 2.0.21) |
 | `.\gradlew.bat assembleRelease bundleRelease` | BUILD SUCCESSFUL; APK v2-signed + AAB signed |
 | `apksigner verify --print-certs` | Verified, signer `CN=SchoolCheck Release` |
-| `.\gradlew.bat testDebugUnitTest` | 7/7 tests pass (URL normalisation + validation) |
-| Install + cold launch on API 37 | Launches to kiosk (already configured), no crash |
-| Setup screen | Renders; normalised-URL preview correct (`10.0.2.2:3101` → `http://10.0.2.2:3101/api`) |
-| Test connection (success) | "Connected" card with device name/location + server time (success envelope parsed) |
-| Wrong device key (401) | "Connection failed — Device key rejected…" (friendly mapping) |
-| Save & start | Persisted to DataStore (verified on the device preferences file); kiosk opens |
-| Kiosk screen | Front-camera preview, face oval, big Scan button, Online badge |
-| Scan upload | `POST /api/kiosk/verify` multipart with `image` field (~56 KB JPEG) and `X-Device-Key`; stub returned CHECK_IN/LATE, CHECK_OUT, NO_MATCH payloads — each rendered correctly |
-| Duplicate upload guard | 3 rapid Scan taps → exactly 1 verify request |
-| Network failure + retry | Stub stopped → "Scan not sent" + **Try again**; after restart, retry re-sent the retained in-memory frame and succeeded |
-| Heartbeat | ~60 s cadence while kiosk visible; Online badge; stops while settings are open; resumes on return |
-| Recent scans | Panel lists last 10 (time, name, ID/class, action, LATE) and survives app restart |
-| Settings from kiosk | Gear → confirmation dialog → setup with saved values; Cancel returns to kiosk |
-| Camera permission | Rationale dialog → Not now → denied panel with "Open app settings"; after granting, camera works |
-| Immersive / keep-screen-on | No system bars in screenshots; flag set in `MainActivity` |
+| `.\gradlew.bat testDebugUnitTest` | 13/13 tests pass (URL + face-fit heuristics) |
+| Install + cold launch | Launches to setup/kiosk, no crash |
+| Setup screen | Default `http://192.168.128.140:3000/api`, editable URL + key, normalised preview |
+| Test connection (real backend) | "Connected · Demo Kiosk · Main Entrance · server time", face service ready |
+| Live face guidance | ML Kit runs on CameraX frames; emulator virtual camera → **No face detected**, Scan disabled |
+| Face registration login | Setup → Register a student face → STU001 credentials → "Mei Chan · STU001" camera screen through the proxy |
+| Face enrolment API | `POST /api/student/enroll-face` succeeded for STU001; a later kiosk scan matched STU001 at 0.7934 |
+| Kiosk scan upload | `POST /api/kiosk/verify` multipart `image` + `X-Device-Key`; CHECK_IN/LATE/CHECK_OUT/NO_MATCH responses render correctly |
+| Duplicate upload guard | Rapid taps → exactly one verify request |
+| Network failure + retry | Friendly failure + **Try again**; retry re-sent the retained in-memory frame |
+| Heartbeat / recent scans / settings / permission | All exercised on the emulator |
 
-Evidence: `screenshots/setup-form.png`, `setup-connected.png`, `setup-badkey.png`,
-`kiosk-online.png`, `result-checkin.png`, `result-checkout.png`, `result-unmatched.png`,
-`recent-scans.png`, `settings-dialog.png`, `permission-rationale.png`, `permission-denied.png`,
-`error-retry.png`, `retry-success.png`.
+Evidence: `screenshots/live-face-guidance.png`, `face-registration-login.png`,
+`face-registration-camera.png`, `setup-default-url.png`, `setup-connected-proxy.png`, plus the
+earlier result-state/permission screenshots.
 
-**Real backend follow-up:** the release APK was installed on the same emulator and its **Test
-connection** hit the real Docker backend successfully (device *Demo Kiosk · Main Entrance*, face
-service ready). A live scan from the emulator returned the real `NO_FACE` response from the API.
-Real face matching on this device still needs a physical tablet/phone with an enrolled student
-because the emulator's virtual camera has no face.
+**Not verified on hardware:** the emulator's virtual camera has no real face, so the green
+**Face ready** state and a camera-based enrolment could not be exercised end-to-end on this machine.
+The face-fit evaluator is covered by unit tests, and the enrolment endpoint + kiosk match were
+verified through the API. Please smoke-test once on a physical tablet with a student.
 
 ## Known limitations
 
 - v1 has no liveness/anti-spoofing (a printed photo could pass) — backend limitation, documented
   in `docs/ARCHITECTURE.md`.
-- The oval is a static on-screen guide; face detection happens server-side after upload.
+- On-device detection guides framing; the server remains authoritative for matching. The emulator
+  camera has no real face, so only the no-face state was observed live.
 - One frame per scan (no burst), matching backend v1.
 - Portrait orientation only, single activity, demo-level settings protection (confirmation
   dialog, no PIN).
 - Cleartext HTTP is a dev convenience, not production-ready.
+- The bundled ML Kit model makes the universal APK ~47 MB; the AAB delivers only the device ABI.

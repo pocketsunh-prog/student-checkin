@@ -61,6 +61,7 @@ data class KioskUiState(
     val history: List<ScanHistoryEntry> = emptyList(),
     val cameraReady: Boolean = false,
     val cameraError: String? = null,
+    val faceGuidance: FaceGuidance = FaceGuidance.SEARCHING,
     val useFrontCamera: Boolean = true,
     val serverTime: String? = null,
     val lastHeartbeatMillis: Long? = null,
@@ -99,10 +100,14 @@ class KioskViewModel(
 
     // ---------------------------------------------------------------- camera
 
-    fun onCameraReady() = _ui.update { it.copy(cameraReady = true, cameraError = null) }
+    fun onCameraReady() =
+        _ui.update { it.copy(cameraReady = true, cameraError = null, faceGuidance = FaceGuidance.SEARCHING) }
 
     fun onCameraError(message: String) =
         _ui.update { it.copy(cameraReady = false, cameraError = message) }
+
+    fun onFaceDetection(detection: FaceDetection) =
+        _ui.update { it.copy(faceGuidance = detection.guidance) }
 
     fun toggleCamera() = _ui.update { it.copy(useFrontCamera = !it.useFrontCamera) }
 

@@ -70,8 +70,10 @@ Change these credentials in `.env` before any real deployment.
 1. Open http://localhost:3000/login and sign in as admin. The dashboard is populated with the seeded demo attendance.
 2. Open http://localhost:3000/register, create a student and capture a face with the webcam
    (or enroll a face later from the admin student page). The photo becomes the student's face key.
-3. Start the Android kiosk (below), configure `http://10.0.2.2:3001/api` (emulator) or
-   `http://<your-PC-LAN-IP>:3001/api` (physical phone) and the device key.
+   On a phone over plain HTTP, browsers block the webcam; use the Android app's **Register a
+   student face** screen instead (student ID + password + live camera guidance).
+3. Start the Android kiosk (below). The default server is `http://192.168.128.140:3000/api`
+   (port 3000 proxies to the API on 3001); the URL and device key are editable in setup.
 4. Scan the student's face: the kiosk shows **Checked in** (or **Late**), then scan again later to
    check out. Watch the admin dashboard/attendance log update.
 5. Reports → pick a date range → export CSV.
@@ -101,6 +103,13 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
   `.\gradlew.bat assembleRelease -PschoolcheckServerUrl=http://<school-pc>:3000/api`.
 - **Emulator:** `http://10.0.2.2:3000/api`; **physical phone/tablet:** use the PC LAN IP and allow
   port 3000 through Windows Firewall. The device and PC must be on the same network.
+- **Real-time face guidance:** on-device ML Kit detects the face and shows “move closer / centre
+  your face / only one person / face ready”. Scan is enabled only when one well-framed face fits
+  the oval, so unusable frames are not uploaded.
+- **Register a student face on the tablet:** setup screen → **Register a student face** (or tap
+  **Register this face** on a “Face not recognised” result), sign in with the student ID +
+  password, wait for “Face ready”, then capture. This is the native alternative for phones where
+  the browser cannot use a webcam over plain-HTTP LAN.
 - Device key is created/rotated in **Admin → Devices**. The seed key is `demo-kiosk-key-12345`.
 - The app captures a JPEG only in memory and posts it; it does not save face images to the gallery.
 - For production, use HTTPS and remove the cleartext-HTTP development allowance.
@@ -259,9 +268,10 @@ backend (including face enrollment), and screenshots every page. See [qa/README.
   TensorFlow.js compatibility shim is exercised by this run.
 - Browser UI E2E on Next.js 16: **9/9** checks, no console/HTTP errors; webcam registration face was
   then matched by the kiosk endpoint (confidence 0.8566).
-- Android: debug build, **signed release APK/AAB**, and unit tests pass. The signed release APK was
-  installed on the emulator, connected to the real backend, and returned the live `NO_FACE` API
-  response.
+- Android: debug build, **signed release APK/AAB**, and unit tests pass (including face-fit
+  heuristics). Live ML Kit guidance shows “No face detected” on the emulator virtual camera and
+  disables Scan; the enrollment screen signs in through the port-3000 proxy. Face enrollment was
+  verified end-to-end through the API (STU001 enrolled then matched at 0.7934).
 - Docker: MySQL → migrations → seed → API → face models all start healthy on a fresh volume; both
   images run Node 26.13.0.
 

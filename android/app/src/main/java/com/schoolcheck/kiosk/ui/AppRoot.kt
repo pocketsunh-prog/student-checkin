@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.schoolcheck.kiosk.ui.enroll.EnrollmentScreen
 import com.schoolcheck.kiosk.ui.kiosk.KioskScreen
 import com.schoolcheck.kiosk.ui.setup.SetupScreen
 
@@ -23,14 +24,20 @@ fun AppRoot() {
     when {
         !state.loaded -> BootScreen()
 
+        state.showEnrollment -> EnrollmentScreen(onBack = rootViewModel::closeEnrollment)
+
         state.showSetup -> SetupScreen(
             initial = state.settings,
             isFirstRun = !state.settings.configured,
             onSaved = rootViewModel::onSettingsSaved,
             onCancel = if (state.settings.configured) rootViewModel::closeSetup else null,
+            onOpenEnrollment = if (state.settings.configured) rootViewModel::openEnrollment else null,
         )
 
-        else -> KioskScreen(onOpenSetup = rootViewModel::openSetup)
+        else -> KioskScreen(
+            onOpenSetup = rootViewModel::openSetup,
+            onOpenEnrollment = rootViewModel::openEnrollment,
+        )
     }
 }
 

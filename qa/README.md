@@ -45,7 +45,13 @@ $env:FACE_VIDEO="$PWD/fixtures/face-camera-leonard1.y4m"; node ui-check.mjs
   at 0.8566.
 - Android: signed release APK installed on the emulator, default setup URL
   `http://192.168.128.140:3000/api`, Test Connection through the port-3000 proxy returned *Demo
-  Kiosk · Main Entrance*, kiosk camera ran, and a scan produced the real `NO_FACE` response.
+  Kiosk · Main Entrance*.
+- Android live face guidance: ML Kit runs on CameraX frames; with the emulator's face-less virtual
+  camera it shows **No face detected** and keeps Scan disabled (face-fit heuristics unit-tested
+  13/13).
+- Android face registration: setup → **Register a student face** → STU001 login succeeded through
+  the proxy and showed the guided camera screen. Enrolment was verified through the same API
+  (`/student/enroll-face`); the enrolled face then matched at the kiosk with confidence 0.7934.
 - Release pipeline: `scripts/build-release.ps1` builds/tags the Node 26 images, signed APK and AAB,
   and verifies the APK signature (`CN=SchoolCheck Release`, v2).
 

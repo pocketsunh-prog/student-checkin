@@ -77,7 +77,10 @@ import com.schoolcheck.kiosk.ui.theme.KioskRed
  * button, connection badge, settings entry and the recent-scans panel.
  */
 @Composable
-fun KioskScreen(onOpenSetup: () -> Unit) {
+fun KioskScreen(
+    onOpenSetup: () -> Unit,
+    onOpenEnrollment: () -> Unit,
+) {
     val viewModel: KioskViewModel = viewModel(factory = KioskViewModel.Factory)
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -123,6 +126,7 @@ fun KioskScreen(onOpenSetup: () -> Unit) {
             useFrontCamera = ui.useFrontCamera,
             onReady = viewModel::onCameraReady,
             onError = viewModel::onCameraError,
+            onFaceDetection = viewModel::onFaceDetection,
         )
     }
     DisposableEffect(Unit) {
@@ -182,13 +186,22 @@ fun KioskScreen(onOpenSetup: () -> Unit) {
                 contentAlignment = Alignment.Center,
             ) {
                 if (hasPermission) {
-                    FaceGuide(cameraReady = ui.cameraReady, cameraError = ui.cameraError)
+                    FaceGuide(
+                        cameraReady = ui.cameraReady,
+                        cameraError = ui.cameraError,
+                        faceGuidance = ui.faceGuidance,
+                    )
                 }
             }
 
             KioskBottomBar(
-                enabled = hasPermission && ui.cameraReady && !ui.uploading,
+                enabled = hasPermission &&
+                    ui.cameraReady &&
+                    !ui.uploading &&
+                    (ui.faceGuidance == FaceGuidance.READY ||
+                        ui.faceGuidance == FaceGuidance.UNAVAILABLE),
                 uploading = ui.uploading,
+                faceGuidance = ui.faceGuidance,
                 useFrontCamera = ui.useFrontCamera,
                 onFlipCamera = viewModel::toggleCamera,
                 onCapture = {
@@ -209,6 +222,10 @@ fun KioskScreen(onOpenSetup: () -> Unit) {
                 result = result,
                 onDismiss = viewModel::dismissResult,
                 onRetry = viewModel::retryLastUpload,
+                onRegisterFace = {
+                    viewModel.dismissResult()
+                    onOpenEnrollment()
+                },
             )
         }
 
@@ -357,7 +374,20 @@ private fun ConnectionBadge(connection: ConnectionStatus) {
 }
 
 @Composable
-private fun FaceGuide(cameraReady: Boolean, cameraError: String?) {
+private fun FaceGuide(
+    cameraReady: Boolean,
+    cameraError: String?,
+    faceGuidance: FaceGuidance,
+) {
+    val ready = faceGuidance == FaceGuidance.READY
+    val ovalColor = when {
+        ready -> KioskGreen
+        faceGuidance == FaceGuidance.SEARCHING ||
+            faceGuidance == FaceGuidance.NO_FACE ||
+            faceGuidance == FaceGuidance.UNAVAILABLE -> Color.White.copy(alpha = 0.9f)
+        else -> KioskAmber
+    }
+
     Column(
         modifier = Modifier.padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -368,15 +398,22 @@ private fun FaceGuide(cameraReady: Boolean, cameraError: String?) {
                 .aspectRatio(0.78f),
         ) {
             drawOval(
-                color = Color.White.copy(alpha = 0.9f),
-                style = Stroke(width = 4.dp.toPx()),
+                color = ovalColor,
+                style = Stroke(width = if (ready) 7.dp.toPx() else 4.dp.toPx()),
             )
         }
         Spacer(Modifier.height(18.dp))
         Text(
-            text = "Align your face inside the oval",
+            text = when {
+                ready -> "Face ready"
+                faceGuidance == FaceGuidance.MULTIPLE_FACES -> "One face only"
+                faceGuidance == FaceGuidance.TOO_FAR -> "Move closer"
+                faceGuidance == FaceGuidance.TOO_CLOSE -> "Move back"
+                faceGuidance == FaceGuidance.OFF_CENTER -> "Centre your face"
+                else -> "Align your face inside the oval"
+            },
             style = MaterialTheme.typography.titleLarge,
-            color = Color.White,
+            color = if (ready) KioskGreen else Color.White,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(4.dp))
@@ -396,11 +433,32 @@ private fun FaceGuide(cameraReady: Boolean, cameraError: String?) {
             )
 
             else -> Text(
-                text = "Look at the camera and tap Scan",
+                text = faceGuidance.hint(),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.75f),
+                color = if (ready) KioskGreen else Color.White.copy(alpha = 0.8f),
                 textAlign = TextAlign.Center,
             )
+        }
+        if (ready) {
+            Spacer(Modifier.height(10.dp))
+            Row(
+                modifier = Modifier
+                    .background(KioskGreen.copy(alpha = 0.18f), RoundedCornerShape(50))
+                    .padding(horizontal = 14.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(KioskGreen, CircleShape),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "Ready — tap Scan",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = KioskGreen,
+                )
+            }
         }
     }
 }
@@ -409,6 +467,7 @@ private fun FaceGuide(cameraReady: Boolean, cameraError: String?) {
 private fun KioskBottomBar(
     enabled: Boolean,
     uploading: Boolean,
+    faceGuidance: FaceGuidance,
     useFrontCamera: Boolean,
     onFlipCamera: () -> Unit,
     onCapture: () -> Unit,
@@ -453,9 +512,14 @@ private fun KioskBottomBar(
             )
         }
         Text(
-            text = if (uploading) "Checking face…" else "Tap Scan to check in / out",
+            text = when {
+                uploading -> "Checking face…"
+                enabled -> "Tap Scan to check in / out"
+                faceGuidance == FaceGuidance.UNAVAILABLE -> "Tap Scan when your face is inside the oval"
+                else -> faceGuidance.hint()
+            },
             style = MaterialTheme.typography.bodyLarge,
-            color = Color.White.copy(alpha = 0.85f),
+            color = if (enabled) Color.White.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.7f),
             textAlign = TextAlign.Center,
         )
     }

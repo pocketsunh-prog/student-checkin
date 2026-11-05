@@ -35,6 +35,9 @@ Android kiosk ──────────▶ Next.js web service (3000) ─�
 
 ## 3. Face pipeline
 
+0. Android kiosks run ML Kit face detection on CameraX `ImageAnalysis` frames **on-device** and
+   only enable capture when one face is centred and well-sized. This is framing guidance only:
+   the backend still performs the authoritative detection, embedding and matching.
 1. Image upload is memory-buffered by Multer (max 8 MB), validated by MIME + magic bytes.
 2. `faceService.extract(buffer)`:
    - `tf.node.decodeImage` → RGB tensor → `human.detect()`.

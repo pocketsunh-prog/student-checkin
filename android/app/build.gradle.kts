@@ -111,11 +111,14 @@ dependencies {
     implementation("androidx.compose.material:material-icons-core")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
-    // CameraX (kiosk camera + in-memory JPEG capture)
+    // CameraX (kiosk camera + in-memory JPEG capture + real-time frame analysis)
     implementation("androidx.camera:camera-core:1.4.1")
     implementation("androidx.camera:camera-camera2:1.4.1")
     implementation("androidx.camera:camera-lifecycle:1.4.1")
     implementation("androidx.camera:camera-view:1.4.1")
+
+    // On-device face detection for live "move closer / align face" guidance.
+    implementation("com.google.mlkit:face-detection:16.1.7")
 
     // Networking (JSON + multipart upload)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")

@@ -1,8 +1,10 @@
 package com.schoolcheck.kiosk.data
 
 import com.schoolcheck.kiosk.data.model.AppSettings
+import com.schoolcheck.kiosk.data.model.EnrollFacePayload
 import com.schoolcheck.kiosk.data.model.HealthPayload
 import com.schoolcheck.kiosk.data.model.HeartbeatPayload
+import com.schoolcheck.kiosk.data.model.StudentLoginPayload
 import com.schoolcheck.kiosk.data.model.VerifyPayload
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -31,4 +33,16 @@ class KioskRepository(
 
     suspend fun verify(settings: AppSettings, jpeg: ByteArray): VerifyPayload =
         api.verify(settings.baseUrl, settings.deviceKey, jpeg)
+
+    suspend fun studentLogin(
+        settings: AppSettings,
+        studentId: String,
+        password: String,
+    ): StudentLoginPayload = api.studentLogin(settings.baseUrl, studentId, password)
+
+    suspend fun enrollFace(
+        settings: AppSettings,
+        token: String,
+        jpeg: ByteArray,
+    ): EnrollFacePayload = api.enrollFace(settings.baseUrl, token, jpeg)
 }

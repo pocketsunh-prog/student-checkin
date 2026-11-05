@@ -45,6 +45,7 @@ fun ScanResultOverlay(
     result: ScanResultUi,
     onDismiss: () -> Unit,
     onRetry: () -> Unit,
+    onRegisterFace: (() -> Unit)? = null,
 ) {
     Box(
         modifier = Modifier
@@ -70,7 +71,10 @@ fun ScanResultOverlay(
             ) {
                 when (result) {
                     is ScanResultUi.Success -> SuccessContent(result)
-                    is ScanResultUi.Unmatched -> UnmatchedContent(result)
+                    is ScanResultUi.Unmatched -> UnmatchedContent(
+                        result = result,
+                        onRegisterFace = if (result.reason == "NO_MATCH") onRegisterFace else null,
+                    )
                     is ScanResultUi.Failure -> FailureContent(result, onRetry = onRetry, onDismiss = onDismiss)
                 }
             }
@@ -138,7 +142,10 @@ private fun SuccessContent(result: ScanResultUi.Success) {
 }
 
 @Composable
-private fun UnmatchedContent(result: ScanResultUi.Unmatched) {
+private fun UnmatchedContent(
+    result: ScanResultUi.Unmatched,
+    onRegisterFace: (() -> Unit)? = null,
+) {
     ResultGlyph(symbol = "!", color = KioskAmber)
     Text(
         text = result.title,
@@ -152,6 +159,15 @@ private fun UnmatchedContent(result: ScanResultUi.Unmatched) {
         color = Color.White.copy(alpha = 0.8f),
         textAlign = TextAlign.Center,
     )
+    if (onRegisterFace != null) {
+        Spacer(Modifier.height(10.dp))
+        Button(
+            onClick = onRegisterFace,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+        ) { Text("Register this face") }
+    }
     Spacer(Modifier.height(6.dp))
     Text(
         text = "Tap anywhere to scan again",

@@ -18,6 +18,7 @@ data class RootUiState(
     val loaded: Boolean = false,
     val settings: AppSettings = AppSettings(),
     val showSetup: Boolean = false,
+    val showEnrollment: Boolean = false,
 )
 
 /**
@@ -44,11 +45,15 @@ class RootViewModel(private val repository: KioskRepository) : ViewModel() {
         }
     }
 
-    fun openSetup() = _state.update { it.copy(showSetup = true) }
+    fun openSetup() = _state.update { it.copy(showSetup = true, showEnrollment = false) }
 
     fun closeSetup() = _state.update { it.copy(showSetup = false) }
 
     fun onSettingsSaved() = _state.update { it.copy(showSetup = false) }
+
+    fun openEnrollment() = _state.update { it.copy(showEnrollment = true, showSetup = false) }
+
+    fun closeEnrollment() = _state.update { it.copy(showEnrollment = false) }
 
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {

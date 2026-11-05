@@ -60,6 +60,7 @@ fun SetupScreen(
     isFirstRun: Boolean,
     onSaved: () -> Unit,
     onCancel: (() -> Unit)?,
+    onOpenEnrollment: (() -> Unit)? = null,
 ) {
     val viewModel: SetupViewModel = viewModel(factory = SetupViewModel.Factory)
     val ui by viewModel.ui.collectAsStateWithLifecycle()
@@ -222,6 +223,37 @@ fun SetupScreen(
         ui.testResult?.let { result ->
             Spacer(Modifier.height(20.dp))
             ConnectionTestCard(result)
+        }
+
+        if (onOpenEnrollment != null && !isFirstRun) {
+            Spacer(Modifier.height(20.dp))
+            val canEnroll = UrlUtils.normalizeBaseUrl(serverUrl) == initial.baseUrl &&
+                deviceKey.trim() == initial.deviceKey
+            OutlinedButton(
+                onClick = {
+                    keyboard?.hide()
+                    onOpenEnrollment()
+                },
+                enabled = canEnroll && !ui.testing && !ui.saving,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+            ) {
+                Text("Register a student face")
+            }
+            Text(
+                text = if (canEnroll) {
+                    "Capture a student's face with the camera after signing in with their account."
+                } else {
+                    "Save your server settings first, then register a student face."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 6.dp),
+            )
         }
 
         Spacer(Modifier.height(28.dp))

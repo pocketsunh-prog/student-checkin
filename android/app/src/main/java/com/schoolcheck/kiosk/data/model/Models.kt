@@ -26,6 +26,36 @@ data class AppSettings(
 )
 
 @Serializable
+data class StudentLoginRequest(
+    val studentId: String,
+    val password: String,
+)
+
+/** Student account returned by POST /api/auth/student/login. */
+@Serializable
+data class StudentAccount(
+    val studentId: String = "",
+    val firstName: String = "",
+    val lastName: String = "",
+    val fullName: String = "",
+    @SerialName("class") val className: String? = null,
+    val form: String? = null,
+)
+
+@Serializable
+data class StudentLoginPayload(
+    val token: String = "",
+    val student: StudentAccount? = null,
+)
+
+/** Response of POST /api/student/enroll-face. */
+@Serializable
+data class EnrollFacePayload(
+    val faceEnrolled: Boolean = false,
+    val enrolledAt: String? = null,
+)
+
+@Serializable
 data class DeviceInfo(
     val id: String? = null,
     val name: String? = null,

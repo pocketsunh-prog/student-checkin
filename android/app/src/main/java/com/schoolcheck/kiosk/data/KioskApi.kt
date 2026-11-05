@@ -1,7 +1,10 @@
 package com.schoolcheck.kiosk.data
 
+import com.schoolcheck.kiosk.data.model.EnrollFacePayload
 import com.schoolcheck.kiosk.data.model.HealthPayload
 import com.schoolcheck.kiosk.data.model.HeartbeatPayload
+import com.schoolcheck.kiosk.data.model.StudentLoginPayload
+import com.schoolcheck.kiosk.data.model.StudentLoginRequest
 import com.schoolcheck.kiosk.data.model.VerifyPayload
 import com.schoolcheck.kiosk.util.UrlUtils
 import java.util.concurrent.TimeUnit
@@ -69,6 +72,48 @@ class KioskApi(private val client: OkHttpClient) {
         json.decodeFromJsonElement(HeartbeatPayload.serializer(), payload)
     }
 
+    /** Student self-service login, used only by the face-registration screen. */
+    suspend fun studentLogin(
+        baseUrl: String,
+        studentId: String,
+        password: String,
+    ): StudentLoginPayload = withContext(Dispatchers.IO) {
+        val body = json
+            .encodeToString(StudentLoginRequest.serializer(), StudentLoginRequest(studentId, password))
+            .toRequestBody(JSON_MEDIA_TYPE)
+        val request = Request.Builder()
+            .url(UrlUtils.join(baseUrl, "/auth/student/login"))
+            .post(body)
+            .build()
+        val root = parseObject(executeForBody(request))
+        if (root["success"]?.jsonPrimitive?.booleanOrNull == false) {
+            throw errorFromEnvelope(root, httpStatus = 200)
+        }
+        json.decodeFromJsonElement(StudentLoginPayload.serializer(), extractData(root))
+    }
+
+    /** Student self-service face enrolment: multipart field `faceImage` + bearer token. */
+    suspend fun enrollFace(
+        baseUrl: String,
+        token: String,
+        jpeg: ByteArray,
+    ): EnrollFacePayload = withContext(Dispatchers.IO) {
+        val multipart = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("faceImage", "face.jpg", jpeg.toRequestBody(JPEG_MEDIA_TYPE))
+            .build()
+        val request = Request.Builder()
+            .url(UrlUtils.join(baseUrl, "/student/enroll-face"))
+            .header("Authorization", "Bearer $token")
+            .post(multipart)
+            .build()
+        val root = parseObject(executeForBody(request))
+        if (root["success"]?.jsonPrimitive?.booleanOrNull == false) {
+            throw errorFromEnvelope(root, httpStatus = 200)
+        }
+        json.decodeFromJsonElement(EnrollFacePayload.serializer(), extractData(root))
+    }
+
     suspend fun verify(baseUrl: String, deviceKey: String, jpeg: ByteArray): VerifyPayload =
         withContext(Dispatchers.IO) {
             val multipart = MultipartBody.Builder()
@@ -128,5 +173,6 @@ class KioskApi(private val client: OkHttpClient) {
     private companion object {
         const val HEADER_DEVICE_KEY = "X-Device-Key"
         val JPEG_MEDIA_TYPE = "image/jpeg".toMediaType()
+        val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
     }
 }
