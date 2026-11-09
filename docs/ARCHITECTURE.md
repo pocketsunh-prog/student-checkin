@@ -39,19 +39,21 @@ Android kiosk ──────────▶ Next.js web service (3000) ─�
    only enable capture when one face is centred and well-sized. This is framing guidance only:
    the backend still performs the authoritative detection, embedding and matching.
 1. Image upload is memory-buffered by Multer (max 8 MB), validated by MIME + magic bytes.
-2. `faceService.extract(buffer)`:
+2. EXIF orientation is normalised with `sharp` (portrait phone photos are often landscape pixels
+   plus an orientation tag, which TFJS ignores).
+3. `faceService.extract(buffer)`:
    - `tf.node.decodeImage` → RGB tensor → `human.detect()`.
    - Detect faces (`blazeface`), mesh (`facemesh`), embedding (`faceres`).
    - Use the largest face; reject >1 useable face (`MULTIPLE_FACES`) or none (`NO_FACE`).
    - Return `{ descriptor: number[1024], confidence: face.boxScore, box }`.
-3. Enrollment: reject if the descriptor's cosine similarity to any existing active student is
+4. Enrollment: reject if the descriptor's cosine similarity to any existing active student is
    ≥ threshold (duplicate face guard), then persist JSON + SHA-256 + photo.
-4. Check-in: compare against all active students with descriptors, pick the best cosine similarity.
+5. Check-in: compare against all active students with descriptors, pick the best cosine similarity.
    Match if `best >= faceMatchThreshold` (default 0.60); otherwise `NO_MATCH`.
-5. Threshold is configurable through settings/env. It must be tuned on the school's own cameras;
+6. Threshold is configurable through settings/env. It must be tuned on the school's own cameras;
    0.60 is a conservative demo default that avoids false accepts on the reference probe set while
    accepting most same-person pairs. Multiple enrollment samples would improve recall.
-6. Face descriptors are treated as sensitive biometric data: never returned by the API, never
+7. Face descriptors are treated as sensitive biometric data: never returned by the API, never
    logged, excluded from CSV, and protected by the DB/volume at rest.
 
 ## 4. Attendance state machine

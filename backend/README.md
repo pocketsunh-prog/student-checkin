@@ -23,8 +23,8 @@ The API contract lives in [`../docs/API.md`](../docs/API.md); the schema is docu
 | Auth | jsonwebtoken (HS256, 12 h) + bcryptjs (cost 12) |
 | DB | MySQL 8 + Prisma 6 (`prisma migrate deploy`) |
 | Uploads | multer (memory, 8 MB) + magic-byte validation (JPEG/PNG/WebP) |
-| Face | `@vladmandic/human` 3.3.6 + `@tensorflow/tfjs-node` 4.22.0 (lazy-loaded) |
-| Tests | vitest + supertest (MySQL integration tests, `FACE_PROVIDER=mock`) |
+| Face | `@vladmandic/human` 3.3.6 + `@tensorflow/tfjs-node` 4.22.0 + `sharp` 0.35.5 (EXIF orientation) |
+| Tests | vitest + supertest (MySQL integration tests, `FACE_PROVIDER=mock`; 63 tests) |
 
 ---
 
@@ -121,6 +121,19 @@ provider ready, 22/22 API E2E checks).
 ---
 
 ## Face recognition
+
+**Phone/EXIF orientation:** Android and phone cameras often store portrait photos as landscape
+pixels plus an EXIF orientation tag (`6`/`8`). `tfjs-node.decodeImage` ignores EXIF, which produced
+sideways face descriptors and caused every live scan to be `NO_MATCH` even though enrollment looked
+fine. `face/human.ts` now runs `sharp().metadata()` + `sharp().rotate()` (no-op for already-upright
+files) before decoding, so enrollment and live scans are compared in a consistent upright frame.
+Regression tests cover orientation 8 and already-upright images.
+
+> If you are upgrading a database that already has face descriptors from before this fix, re-enroll
+> those students once from the admin UI/API (or re-run enrollment with their stored photo). The
+> descriptors themselves are not auto-rewritten. In this deployment `STU001` and `STU6767` were
+> re-enrolled after the fix and verified at confidence 0.98–1.0.
+
 
 `FACE_PROVIDER=human` (Docker) — lazy-imports Human + tfjs-node, loads models from
 `FACE_MODEL_PATH`, decodes the uploaded frame with `tf.node.decodeImage`, runs

@@ -188,6 +188,10 @@ Android kiosk phones ──────────┘                          
 
 - Models: BlazeFace detector, FaceMesh, FaceRes embedding (`backend/models/`, ~9 MB, downloaded from
   the MIT-licensed `@vladmandic/human-models` project).
+- **EXIF orientation:** phone/Android JPEGs can carry a rotation tag; the backend normalises
+  orientation with `sharp` before face detection. This fixes the “registered but never matches”
+  case caused by a sideways enrollment descriptor. If you upgrade an existing database, re-enrol
+  faces once so stored descriptors use the corrected pipeline.
 - Default cosine threshold `0.60` is a conservative starting point. Tune
   `FACE_MATCH_THRESHOLD` / **Settings → Face match threshold** with the school's cameras and
   students: raise it if impostors match, lower it if genuine students are rejected.
@@ -262,7 +266,8 @@ backend (including face enrollment), and screenshots every page. See [qa/README.
 
 ### Verified in this build (Node 26.13.0 / Next.js 16.4.5)
 
-- Backend: `typecheck`/`build` pass; **61/61** vitest+supertest tests pass against MySQL.
+- Backend: `typecheck`/`build` pass; **63/63** vitest+supertest tests pass against MySQL
+  (including new EXIF orientation regressions).
 - API E2E with the **human** face provider on Node 26: **22/22** checks (registration, same-person
   match 0.7934, impostor rejected, check-in/check-out state machine, reports, CSV). The Node 26
   TensorFlow.js compatibility shim is exercised by this run.

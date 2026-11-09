@@ -1,4 +1,5 @@
 import path from 'node:path';
+import sharp from 'sharp';
 // Must be imported before @tensorflow/tfjs-node (Node 26 compatibility).
 import '../lib/node-compat';
 import type { FaceBox, FaceExtraction, FaceProvider } from './types';
@@ -47,6 +48,22 @@ function buildConfig(modelBasePath: string): AnyRecord {
     gesture: { enabled: false },
     segmentation: { enabled: false },
   };
+}
+
+/**
+ * Apply EXIF orientation to JPEG/PNG/WebP uploads before TFJS decoding.
+ * Returns the original buffer when no rotation is needed (or metadata is unreadable).
+ */
+export async function orientImage(image: Buffer): Promise<Buffer> {
+  try {
+    const metadata = await sharp(image).metadata();
+    const orientation = metadata.orientation ?? 1;
+    if (orientation === 1) return image;
+    return await sharp(image).rotate().jpeg({ quality: 95 }).toBuffer();
+  } catch {
+    // Let the TFJS decoder produce the UNREADABLE result for truly bad data.
+    return image;
+  }
 }
 
 function readEmbedding(face: AnyRecord): number[] | null {
@@ -140,10 +157,17 @@ export class HumanFaceProvider implements FaceProvider {
       throw new Error('Human face provider is not initialised');
     }
 
+    // TensorFlow.js decodeImage ignores EXIF orientation. Phone cameras (and the
+    // Android kiosk) frequently store a portrait selfie as landscape pixels with
+    // orientation=6/8; feeding those raw pixels to the face models produces a
+    // sideways descriptor that can never match a live scan. Normalise to upright
+    // pixels before decoding.
+    const oriented = await orientImage(image);
+
     let tensor: unknown;
     try {
       tensor = human.tf.tidy(() => {
-        const decoded = human.tf.node.decodeImage(image, 3);
+        const decoded = human.tf.node.decodeImage(oriented, 3);
         return human.tf.cast(human.tf.expandDims(decoded, 0), 'float32');
       });
     } catch {
